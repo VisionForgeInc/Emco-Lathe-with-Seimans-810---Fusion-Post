@@ -35,9 +35,17 @@ ggtech V5
   -changed R26=" + zFormat.format(-Math.abs(DPR) )+
   -to      R26=" + zFormat.format(Math.abs(DPR) )+
 
+
+visionforge V6
+-  Fixed G33, all X values during G33 now have I values added (see note below)
+  * added iPitchOutput() for I value addition
+  * added "testX" variable to G33 function as a replacement for all values that previously had xOutput.format(_x) (in function onLinear)
+  * changed writeBlock(gMotionModal.format(33), xOutput.format(_x), yOutput.format(_y), zOutput.format(_z), pitchOutput.format(1 / threadsPerInch));
+        to writeBlock(gMotionModal.format(33), testX, yOutput.format(_y), zOutput.format(_z), pitchOutput.format(1 / threadsPerInch), (testX ? iPitchOutput.format(1 / threadsPerInch) : ""));
+- Please note that this is a "band-aid" solution as it just copies the K values as the I value during threading, if the I value needs to be different than the K value this will not work.
 */
  
-description = "Emco 342 Siemens 810T";
+description = "Emco 342 Siemens 810T - V6";
 vendor = "Siemens";
 vendorUrl = "http://www.siemens.com";
 legal = "Copyright (C) 2012-2016 by Autodesk, Inc.";
@@ -102,6 +110,8 @@ var zOutput = createVariable({prefix:"Z"}, zFormat);
 var feedOutput = createVariable({prefix:"F"}, feedFormat);
 var pitchOutput = createVariable({prefix:"K", force:true}, pitchFormat);
 var sOutput = createVariable({prefix:"S", force:true}, rpmFormat);
+
+var iPitchOutput = createVariable({prefix:"I", force:true}, pitchFormat); // visionforge - added iPitchOutput for hacky addition of i codes to all G33 lines with "x" in it
  
 // circular output
 var kOutput = createReferenceVariable({prefix:"K"}, spatialFormat);
@@ -725,7 +735,8 @@ function onLinear(_x, _y, _z, feed) {
     resetFeed = true;
     var threadPitch = getParameter("operation:threadPitch");
     var threadsPerInch = 1.0 / threadPitch; // per mm for metric
-    writeBlock(gMotionModal.format(33), xOutput.format(_x), yOutput.format(_y), zOutput.format(_z), pitchOutput.format(1 / threadsPerInch));
+    var testX = xOutput.format(_x); // visionforge - created variable for xOutput to use in next line (if xOutPut.format() used more than once ever in this function, it "disappears" and does a bunch of whacky stuff, don't ask me to explain it)
+    writeBlock(gMotionModal.format(33), testX, yOutput.format(_y), zOutput.format(_z), pitchOutput.format(1 / threadsPerInch), (testX ? iPitchOutput.format(1 / threadsPerInch) : "")); // visionforge - replaced "xOutput.format(_x)" with "testX" (see above) and adds hacky iPitchOutput.format() function for i code conditional on x existing in the same line
     return;
   }
   if (resetFeed) {
